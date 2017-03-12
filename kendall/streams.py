@@ -107,7 +107,7 @@ class Worker(SISOStream):
             entity.on_drop(self, time)
 
     def ready(self):
-        return self.current >= self.capacity
+        return self.current <= self.capacity
 
     def tick(self, time):
         entity = self.entities[time].popleft()
