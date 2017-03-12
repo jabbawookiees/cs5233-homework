@@ -1,35 +1,63 @@
-from .main import EnterEventData, KendallStream, KendallEvent
+from .main import Entity, SISOStream
 import numpy.random
 
 
-class KendallSpawner(KendallStream):
-    def __init__(self, simulator):
-        self.simulator = simulator
+class Spawner(SISOStream):
+    """This implements the generic class for a spawner.
+    A spawner has the properties:
+    name -- The name of this queue
 
-    def enter(self, event, event_data):
-        self._pipe_event(event, event_data.time)
-        next_event = KendallEvent(None)
-        next_event_time = self.next_event_time(event, event_data.time)
-        next_event_data = EnterEventData(next_event_time, self)
-        self.simulator.add_event(next_event, next_event_data)
+    Interesting things to override:
+    next_event_time - Dictates the time between events
+    create_entity - Dictates what entities are created
+    """
 
     def start(self):
-        next_event = KendallEvent(None)
-        next_event_time = self.next_event_time(None, 0)
-        next_event_data = EnterEventData(next_event_time, self)
-        self.simulator.add_event(next_event, next_event_data)
+        first_event_time = self.next_event_time(0)
+        self.simulator.tick_future(self, first_event_time)
 
-    def next_event_time(self, event, time):
-        return time + 1
+    def ready(self):
+        return False
 
-    def reset(self):
+    def tick(self, time):
+        entity = self.create_entity(time)
+        self.simulator.add_entity(entity)
+        entity.on_exit(self, time)
+        self.destination.enter(entity, time)
+        next_spawn_time = self.next_event_time(time)
+        self.simulator.tick_future(self, next_spawn_time)
+
+    def notify_ready(self, time):
         pass
 
+    def next_event_time(self, time):
+        raise Exception("Please implement this for the spawner")
 
-class ExponentialSpawner(KendallSpawner):
-    def __init__(self, simulator, scale):
-        self.simulator = simulator
-        self.scale = scale
+    def create_entity(self, time):
+        return Entity()
 
-    def next_event_time(self, event, time):
-        return time + numpy.random.exponential(self.scale)
+
+class ConstantSpawner(Spawner):
+    def __init__(self, *args, **kwargs):
+        """
+        Keyword arguments:
+        spawn_time - Time between spawns
+        """
+        super(ConstantSpawner, self).__init__(*args, **kwargs)
+        self.spawn_time = kwargs.get('spawn_time', 1)
+
+    def next_event_time(self, time):
+        return time + self.spawn_time
+
+
+class ExponentialSpawner(Spawner):
+    def __init__(self, *args, **kwargs):
+        """
+        Keyword arguments:
+        spawn_time - Time between spawns
+        """
+        super(ExponentialSpawner, self).__init__(*args, **kwargs)
+        self.spawn_time = kwargs.get('spawn_time', 1)
+
+    def next_event_time(self, time):
+        return time + numpy.random.exponential(self.spawn_time)
