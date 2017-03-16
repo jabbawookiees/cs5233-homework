@@ -25,6 +25,7 @@ class Simulator(object):
         heapq.heappush(self.event_queue, event)
 
     def run(self):
+        self.reset()
         for name, stream in self.streams.iteritems():
             stream.start()
         while len(self.event_queue) > 0:

@@ -50,6 +50,20 @@ class ConstantSpawner(Spawner):
         return time + self.spawn_time
 
 
+class UniformSpawner(Spawner):
+    def __init__(self, *args, **kwargs):
+        """
+        Keyword arguments:
+        spawn_time - Time between spawns
+        """
+        super(UniformSpawner, self).__init__(*args, **kwargs)
+        self.low = kwargs.get('low', 1)
+        self.high = kwargs.get('high', 1)
+
+    def next_event_time(self, time):
+        return time + numpy.random.uniform(self.low, self.high)
+
+
 class ExponentialSpawner(Spawner):
     def __init__(self, *args, **kwargs):
         """
